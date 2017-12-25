@@ -4,20 +4,24 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"time"
+	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/spf13/viper"
 )
 
 type monitorCore struct {
-	id        int64
-	name      string
-	host      string
-	port      int
-	heartbeat int64
-	keyprefix string
-	cli       *clientv3.Client
+	id         int64
+	name       string
+	host       string
+	port       int
+	heartbeat  int64
+	keyprefix  string
+	role       string
+	memberlist []string
+	cli        *clientv3.Client
 }
 
 func main() {
@@ -42,22 +46,25 @@ func main() {
 		port:      viper.GetInt("etcd_port"),
 		heartbeat: viper.GetInt64("heart_beat_timer"),
 		keyprefix: "/heartbeat/monitorcore",
+		role:      "member",
 		cli:       cli,
 	}
 
+	mc.Stdout(fmt.Sprintf("ID: %d, Starting monitor...\n", mc.id))
 	defer mc.cli.Close()
-
 	go func() {
+		mc.SendHeartBeat()
 		for range time.Tick(time.Second * time.Duration(mc.heartbeat)) {
 			mc.SendHeartBeat()
+			mc.UpdateMemberList()
+			mc.Stdout(fmt.Sprintf("Who am I: %s\n", mc.role))
 		}
 	}()
-	mc.MemberList()
-	mc.Watch("mission")
+	mc.Watch("/mission")
 }
 
 func (mc *monitorCore) Watch(key string) {
-	fmt.Printf("Watching by '%s'\n", key)
+	mc.Stdout(fmt.Sprintf("Watching by '%s'\n", key))
 	rch := mc.cli.Watch(context.Background(), key, clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
@@ -67,7 +74,7 @@ func (mc *monitorCore) Watch(key string) {
 }
 
 func (mc *monitorCore) SendHeartBeat() {
-	fmt.Printf("Send heartbeat\n")
+	mc.Stdout("Send heartbeat")
 	key := fmt.Sprintf("%s/%d", mc.keyprefix, mc.id)
 	resp, err := mc.cli.Grant(context.TODO(), mc.heartbeat+1)
 	if err != nil {
@@ -80,11 +87,19 @@ func (mc *monitorCore) SendHeartBeat() {
 	}
 }
 
-func (mc *monitorCore) MemberList() {
+func (mc *monitorCore) UpdateMemberList() {
+	mc.memberlist = []string{}
 	resp, _ := mc.cli.Get(context.TODO(), mc.keyprefix, clientv3.WithPrefix())
-
-	fmt.Printf("Member list:\n")
 	for _, ev := range resp.Kvs {
-		fmt.Printf("%s : %s\n", ev.Key, ev.Value)
+		mc.memberlist = append(mc.memberlist, string(ev.Value[:]))
 	}
+	sort.Strings(mc.memberlist)
+	if(strconv.FormatInt(mc.id, 10) == mc.memberlist[0]){
+		mc.role = "master"
+	}
+}
+
+func (mc *monitorCore) Stdout(msg string) {
+	t := time.Now()
+	fmt.Printf("[%s] %s\n", t.Format("2017-12-23 23:59:59.000"), msg)
 }
