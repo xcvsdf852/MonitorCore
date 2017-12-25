@@ -1,4 +1,6 @@
 name: max
 etcd_host: 127.0.0.1
 etcd_port: 2379
-heart_beat_timer: 5
+heartbeat_timer: 5
+heartbeat_key_prefix: /BBOS/MonitorCore/heartbeat
+mission_key_prefix: /BBOS/MonitorCore/mission
