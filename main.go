@@ -21,8 +21,16 @@ type monitorCore struct {
 	heartbeatKeyPrefix string
 	missionKeyPrefix   string
 	role               string
-	memberlist         []string
+	memberList         []string
+	missionList        []string
 	cli                *clientv3.Client
+}
+
+type mission struct {
+	key          string
+	data         string
+	gap          int
+	lastExecTime int
 }
 
 func main() {
@@ -91,13 +99,13 @@ func (mc *monitorCore) SendHeartBeat() {
 }
 
 func (mc *monitorCore) UpdateMemberList() {
-	mc.memberlist = []string{}
+	mc.memberList = []string{}
 	resp, _ := mc.cli.Get(context.TODO(), mc.heartbeatKeyPrefix, clientv3.WithPrefix())
 	for _, ev := range resp.Kvs {
-		mc.memberlist = append(mc.memberlist, string(ev.Value[:]))
+		mc.memberList = append(mc.memberList, string(ev.Value[:]))
 	}
-	sort.Strings(mc.memberlist)
-	if strconv.FormatInt(mc.id, 10) == mc.memberlist[0] {
+	sort.Strings(mc.memberList)
+	if strconv.FormatInt(mc.id, 10) == mc.memberList[0] {
 		mc.role = "master"
 	}
 }
