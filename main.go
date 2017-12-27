@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -11,6 +13,19 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/spf13/viper"
 )
+
+type schema struct {
+	Duration  int
+	Extrainfo string
+	Op        string
+	Value     string
+}
+
+type mission struct {
+	No     string
+	Title  string
+	Schema schema
+}
 
 type monitorCore struct {
 	id                 int64
@@ -22,32 +37,26 @@ type monitorCore struct {
 	missionKeyPrefix   string
 	role               string
 	memberList         []string
-	missionList        []string
+	missionList        map[string]mission
 	cli                *clientv3.Client
 }
 
-type mission struct {
-	key          string
-	data         string
-	gap          int
-	lastExecTime int
-}
-
 func main() {
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.LstdFlags)
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 	viper.ReadInConfig()
 
+	log.Println("Connecting to ETCD...")
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   []string{fmt.Sprintf("http://%s:%d", viper.GetString("etcd_host"), viper.GetInt("etcd_port"))},
 		DialTimeout: time.Second,
 	})
-
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
-
 	mc := monitorCore{
 		id:                 time.Now().UnixNano(),
 		name:               viper.GetString("name"),
@@ -59,42 +68,48 @@ func main() {
 		role:               "member",
 		cli:                cli,
 	}
-
-	mc.Stdout("Starting monitor...")
-	mc.Stdout(fmt.Sprintf("ID: %d", mc.id))
 	defer mc.cli.Close()
-	go func() {
+
+	mc.ReadInAllMission()
+	go mc.Watch()
+	mc.SendHeartBeat()
+	for range time.Tick(time.Second * time.Duration(mc.heartbeatTimer)) {
 		mc.SendHeartBeat()
-		for range time.Tick(time.Second * time.Duration(mc.heartbeatTimer)) {
-			mc.SendHeartBeat()
-			mc.UpdateMemberList()
-			mc.Stdout(fmt.Sprintf("Who am I? [%s]%d", mc.role, mc.id))
-		}
-	}()
-	mc.Watch()
+		mc.UpdateMemberList()
+		log.Printf("Who am I? [%s]%d\n", mc.role, mc.id)
+	}
 }
 
 func (mc *monitorCore) Watch() {
-	mc.Stdout(fmt.Sprintf("Watching by '%s'", mc.missionKeyPrefix))
+	log.Printf("Watching by '%s'", mc.missionKeyPrefix)
 	rch := mc.cli.Watch(context.Background(), mc.missionKeyPrefix, clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
-			fmt.Printf("%s %q : %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
+			log.Printf("%s %q : %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
+			m := mission{}
+			err := json.Unmarshal(ev.Kv.Value, &m)
+			if err != nil {
+				log.Println(err)
+			}
+			mc.missionList[string(ev.Kv.Key)] = m
 		}
 	}
 }
 
+func (mc *monitorCore) CheckMission() {
+
+}
+
 func (mc *monitorCore) SendHeartBeat() {
-	mc.Stdout("Send heartbeat to etcd")
 	key := fmt.Sprintf("%s/%d", mc.heartbeatKeyPrefix, mc.id)
 	resp, err := mc.cli.Grant(context.TODO(), mc.heartbeatTimer+1)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	_, err = mc.cli.Put(context.TODO(), key, fmt.Sprintf("%d", mc.id), clientv3.WithLease(resp.ID))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
@@ -110,7 +125,22 @@ func (mc *monitorCore) UpdateMemberList() {
 	}
 }
 
-func (mc *monitorCore) Stdout(msg string) {
-	t := time.Now()
-	fmt.Printf("[%s] %s\n", t.Format("2006-01-02 15:04:05"), msg)
+// PrettyPrint something
+func PrettyPrint(v interface{}) {
+	b, _ := json.MarshalIndent(v, "", "  ")
+	log.Println(string(b))
+}
+
+func (mc *monitorCore) ReadInAllMission() {
+	log.Printf("Read in all mission with key: %s\n", mc.missionKeyPrefix)
+	mc.missionList = make(map[string]mission)
+	resp, _ := mc.cli.Get(context.TODO(), mc.missionKeyPrefix, clientv3.WithPrefix())
+	for _, ev := range resp.Kvs {
+		m := mission{}
+		err := json.Unmarshal(ev.Value[:], &m)
+		if err != nil {
+			log.Println(err)
+		}
+		mc.missionList[string(ev.Key[:])] = m
+	}
 }
