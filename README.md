@@ -50,3 +50,21 @@ curl -X POST --data "no=A003&userId=9876543210&title=put+test&duration=20&extrai
 #     op => Operator to compare value. (REQUIRE)
 #     value => a value to compare with this mission. (REQUIRE)
 ```
+
+## Data format to NSQ
+
+```json
+{"No":"A003","Title":"put test","UserID":"9876543210","Schema":{"Duration":2,"Extrainfo":"{\"info\":\"put extrainfo\"}","Op":"<=","Value":"450000"}}
+
+{
+    "No":"A003",
+    "Title":"put test",
+    "UserID":"9876543210",
+    "Schema":{
+        "Duration":2,
+        "Extrainfo":"{\"info\":\"put extrainfo\"}",
+        "Op":"<=",
+        "Value":"450000"
+    }
+}
+```
