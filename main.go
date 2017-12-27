@@ -162,7 +162,10 @@ func (mc *monitorCore) listenHTTPRequest() {
 	r := http.NewServeMux()
 	r.Handle("/put", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.putRequest)))
 	r.Handle("/info", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.infoRequest)))
-	http.ListenAndServe(":"+viper.GetString("HTTP_PORT"), handlers.CompressHandler(r))
+	err := http.ListenAndServe(":"+viper.GetString("HTTP_PORT"), handlers.CompressHandler(r))
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func watchMission(mc *monitorCore) {
