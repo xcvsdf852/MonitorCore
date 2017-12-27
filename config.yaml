@@ -1,6 +1,17 @@
-name: max
-etcd_host: 127.0.0.1
-etcd_port: 2379
-heartbeat_timer: 5
-heartbeat_key_prefix: /BBOS/MonitorCore/heartbeat
-mission_key_prefix: /BBOS/MonitorCore/mission
+# Not yet to use
+PROJECT_NAME: TEST
+# Do check mission each sec.
+DURATION: 1
+
+# Link to ETCD
+ETCD_HOST: 127.0.0.1
+ETCD_PORT: 2379
+ETCD_PREFIX: /BBOS/MonitorCore
+
+# Link to NSQ and which TOPIC to send
+NSQ_HOST: 127.0.0.1
+NSQ_PORT: 4150
+NSQ_TOPIC: BBOS_TO_ME
+
+# Listen http port
+HTTP_PORT: 9453
