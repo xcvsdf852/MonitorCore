@@ -55,7 +55,9 @@ curl -X POST --data "no=A003&userId=9876543210&title=put+test&duration=20&extrai
 
 ```json
 {"No":"A003","Title":"put test","UserID":"9876543210","Schema":{"Duration":2,"Extrainfo":"{\"info\":\"put extrainfo\"}","Op":"<=","Value":"450000"}}
+```
 
+```json
 {
     "No":"A003",
     "Title":"put test",
