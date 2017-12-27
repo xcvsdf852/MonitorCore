@@ -136,9 +136,9 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 				log.Println(err)
 			}
 		}
-
+		io.WriteString(w, "OK")
 	} else {
-		io.WriteString(w, "Wrong HTTP request method.\n")
+		io.WriteString(w, "Wrong HTTP request method.")
 	}
 }
 
@@ -154,7 +154,7 @@ func (mc *monitorCore) infoRequest(w http.ResponseWriter, req *http.Request) {
 		mcInfoStr, _ := json.Marshal(mcInfo)
 		io.WriteString(w, string(mcInfoStr[:]))
 	} else {
-		io.WriteString(w, "Wrong HTTP request method.\n")
+		io.WriteString(w, "Wrong HTTP request method.")
 	}
 }
 
