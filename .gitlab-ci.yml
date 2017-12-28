@@ -1,7 +1,7 @@
 stages:
   - build
 build:linux:
-  image: golang
+  image: golang:1.9.1
   stage: build
   script:
     - ln -s $PWD $GOPATH/src/MonitorCore
