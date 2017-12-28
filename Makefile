@@ -18,7 +18,6 @@ buildgusher = GOOS=$(1) GOARCH=$(2) go build -ldflags "-X main.version=$(TAG) -X
 tar = cp *.env.example ./build && cp test/conn-test/conn-test.env.example ./build &&cd build && tar -zcvf $(GUSHER)_$(TAG)_$(1)_$(2).tar.gz $(JWTGENERATE)$(3) $(CONNTEST)$(3) $(GUSHER)$(3) *.env.example  test/ && rm $(JWTGENERATE)$(3) $(CONNTEST)$(3) $(GUSHER)$(3)  *.env.example  && rm -rf test/
 
 build/linux: 
-	go test
 	$(call buildjwt,linux,amd64,)
 	$(call buildconntest,linux,amd64,)
 	$(call buildgusher,linux,amd64,)
@@ -26,7 +25,6 @@ build/linux:
 build/linux_amd64.tar.gz: build/linux
 	$(call tar,linux,amd64,)
 build/windows: 
-	go test
 	$(call buildjwt,windows,amd64,.exe)
 	$(call buildconntest,windows,amd64,.exe)
 	$(call buildgusher,windows,amd64,.exe)
@@ -34,7 +32,6 @@ build/windows:
 build/windows_amd64.tar.gz: build/windows
 	$(call tar,windows,amd64,.exe)
 build/darwin: 
-	go test
 	$(call buildjwt,darwin,amd64,)
 	$(call buildconntest,darwin,amd64,)
 	$(call buildgusher,darwin,amd64,)
