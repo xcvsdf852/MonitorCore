@@ -1,6 +1,6 @@
 stages:
   - build
-build:linux:
+build:linux32:
   image: golang:1.9.1
   stage: build
   script:
@@ -10,12 +10,83 @@ build:linux:
     - go get github.com/spf13/viper
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
-    - go build -o $GOPATH/src/MonitorCore/MonitorCore_linux
+    - GOOS=linux GOARCH=386 go build -o $GOPATH/src/MonitorCore/MonitorCore_linux32
   artifacts:
     when: on_success
     name: "MonitorCore_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     paths:
-    - MonitorCore_linux
+    - MonitorCore_*
   only:
   - tags
-
+build:linux64:
+  image: golang:1.9.1
+  stage: build
+  script:
+    - go get github.com/coreos/etcd/clientv3
+    - go get github.com/gorilla/handlers
+    - go get github.com/nsqio/go-nsq
+    - go get github.com/spf13/viper
+    - ln -s $PWD $GOPATH/src/MonitorCore
+    - cd $GOPATH/src/MonitorCore
+    - GOOS=linux GOARCH=amd64 go build -o $GOPATH/src/MonitorCore/MonitorCore_linux64
+  artifacts:
+    when: on_success
+    name: "MonitorCore_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    paths:
+    - MonitorCore_*
+  only:
+  - tags
+build:windows32:
+  image: golang:1.9.1
+  stage: build
+  script:
+    - go get github.com/coreos/etcd/clientv3
+    - go get github.com/gorilla/handlers
+    - go get github.com/nsqio/go-nsq
+    - go get github.com/spf13/viper
+    - ln -s $PWD $GOPATH/src/MonitorCore
+    - cd $GOPATH/src/MonitorCore
+    - GOOS=windows GOARCH=386 go build -o $GOPATH/src/MonitorCore/MonitorCore_win32.exe
+  artifacts:
+    when: on_success
+    name: "MonitorCore_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    paths:
+    - MonitorCore_*
+  only:
+  - tags
+build:windows64:
+  image: golang:1.9.1
+  stage: build
+  script:
+    - go get github.com/coreos/etcd/clientv3
+    - go get github.com/gorilla/handlers
+    - go get github.com/nsqio/go-nsq
+    - go get github.com/spf13/viper
+    - ln -s $PWD $GOPATH/src/MonitorCore
+    - cd $GOPATH/src/MonitorCore
+    - GOOS=windows GOARCH=amd64 go build -o $GOPATH/src/MonitorCore/MonitorCore_win64.exe
+  artifacts:
+    when: on_success
+    name: "MonitorCore_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    paths:
+    - MonitorCore_*
+  only:
+  - tags
+build:darwin:
+  image: golang:1.9.1
+  stage: build
+  script:
+    - go get github.com/coreos/etcd/clientv3
+    - go get github.com/gorilla/handlers
+    - go get github.com/nsqio/go-nsq
+    - go get github.com/spf13/viper
+    - ln -s $PWD $GOPATH/src/MonitorCore
+    - cd $GOPATH/src/MonitorCore
+    - GOOS=darwin GOARCH=amd64 go build -o $GOPATH/src/MonitorCore/MonitorCore_darwin
+  artifacts:
+    when: on_success
+    name: "MonitorCore_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    paths:
+    - MonitorCore_*
+  only:
+  - tags
