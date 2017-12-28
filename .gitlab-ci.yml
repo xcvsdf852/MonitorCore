@@ -8,8 +8,10 @@ build:
     - go get github.com/gorilla/handlers
     - go get github.com/nsqio/go-nsq
     - go get github.com/spf13/viper
+    - ln -s $PWD $GOPATH/src/MonitorCore
   cache:
-    untracked: true
+    paths:
+      - $GOPATH/src/github.com/
   only:
     - tags
 build:linux32:
