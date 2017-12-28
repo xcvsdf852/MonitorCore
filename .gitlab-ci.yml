@@ -4,6 +4,10 @@ build:linux:
   image: golang:1.9.1
   stage: build
   script:
+    - go get github.com/coreos/etcd/clientv3
+    - go get github.com/gorilla/handlers
+    - go get github.com/nsqio/go-nsq
+    - go get github.com/spf13/viper
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
     - export VERSION=$(git describe --tags | cut -d '-' -f 1)
