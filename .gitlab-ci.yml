@@ -1,0 +1,18 @@
+stages:
+  - build
+build:linux:
+  image: golang
+  stage: build
+  script:
+    - ln -s $PWD $GOPATH/src/MonitorCore
+    - cd $GOPATH/src/MonitorCore
+    - export VERSION=$(git describe --tags | cut -d '-' -f 1)
+    - cd $GOPATH/src/MonitorCore/MonitorCore
+    - go build -o "${GOPATH}/src/MonitorCore/MonitorCore_${VERSION}"
+  artifacts:
+    when: on_success
+    name: "MonitorCore_${CI_BUILD_REF_NAME}"
+    paths:
+    - "MonitorCore_*"
+  only:
+  - tags
