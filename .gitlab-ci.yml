@@ -9,6 +9,8 @@ build:
     - go get github.com/spf13/viper
   cache:
     untracked: true
+  only:
+    - tags
 build:linux32:
   image: golang:1.9.1
   stage: build
