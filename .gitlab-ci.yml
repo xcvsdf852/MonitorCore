@@ -7,8 +7,8 @@ build:linux:
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
     - export VERSION=$(git describe --tags | cut -d '-' -f 1)
-    - cd $GOPATH/src/MonitorCore/MonitorCore
-    - go build -o "${GOPATH}/src/MonitorCore/MonitorCore_${VERSION}"
+    - cd $GOPATH/src/MonitorCore
+    - go build -o "${GOPATH}/src/MonitorCore_${VERSION}"
   artifacts:
     when: on_success
     name: "MonitorCore_${CI_BUILD_REF_NAME}"
