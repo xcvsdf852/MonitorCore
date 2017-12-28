@@ -1,13 +1,18 @@
 stages:
   - build
-build:linux32:
-  image: golang:1.9.1
+build:
   stage: build
   script:
     - go get github.com/coreos/etcd/clientv3
     - go get github.com/gorilla/handlers
     - go get github.com/nsqio/go-nsq
     - go get github.com/spf13/viper
+  cache:
+    untracked: true
+build:linux32:
+  image: golang:1.9.1
+  stage: build
+  script:
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
     - GOOS=linux GOARCH=386 go build -o $GOPATH/src/MonitorCore/MonitorCore_linux32
@@ -22,10 +27,6 @@ build:linux64:
   image: golang:1.9.1
   stage: build
   script:
-    - go get github.com/coreos/etcd/clientv3
-    - go get github.com/gorilla/handlers
-    - go get github.com/nsqio/go-nsq
-    - go get github.com/spf13/viper
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
     - GOOS=linux GOARCH=amd64 go build -o $GOPATH/src/MonitorCore/MonitorCore_linux64
@@ -40,10 +41,6 @@ build:windows32:
   image: golang:1.9.1
   stage: build
   script:
-    - go get github.com/coreos/etcd/clientv3
-    - go get github.com/gorilla/handlers
-    - go get github.com/nsqio/go-nsq
-    - go get github.com/spf13/viper
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
     - GOOS=windows GOARCH=386 go build -o $GOPATH/src/MonitorCore/MonitorCore_win32.exe
@@ -58,10 +55,6 @@ build:windows64:
   image: golang:1.9.1
   stage: build
   script:
-    - go get github.com/coreos/etcd/clientv3
-    - go get github.com/gorilla/handlers
-    - go get github.com/nsqio/go-nsq
-    - go get github.com/spf13/viper
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
     - GOOS=windows GOARCH=amd64 go build -o $GOPATH/src/MonitorCore/MonitorCore_win64.exe
@@ -76,10 +69,6 @@ build:darwin:
   image: golang:1.9.1
   stage: build
   script:
-    - go get github.com/coreos/etcd/clientv3
-    - go get github.com/gorilla/handlers
-    - go get github.com/nsqio/go-nsq
-    - go get github.com/spf13/viper
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
     - GOOS=darwin GOARCH=amd64 go build -o $GOPATH/src/MonitorCore/MonitorCore_darwin
