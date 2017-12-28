@@ -1,6 +1,7 @@
 stages:
   - build
 build:
+  image: golang:1.9.1
   stage: build
   script:
     - go get github.com/coreos/etcd/clientv3
