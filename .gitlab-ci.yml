@@ -10,12 +10,12 @@ build:linux:
     - go get github.com/spf13/viper
     - ln -s $PWD $GOPATH/src/MonitorCore
     - cd $GOPATH/src/MonitorCore
-    - make build/linux
+    - go -o $GOPATH/src/MonitorCore/MonitorCore_linux
   artifacts:
     when: on_success
     name: "MonitorCore_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     paths:
-    - build/
+    - MonitorCore_linux
   only:
   - tags
 
