@@ -4,8 +4,8 @@ build:
   image: golang:1.9.1
   stage: build
   script:
-    - ln -s $PWD $GOPATH/src/gusher.cluster
-    - cd $GOPATH/src/gusher.cluster
+    - ln -s $PWD $GOPATH/src/MonitorCore
+    - cd $GOPATH/src/MonitorCore
     - make build/linux
 build:linux:
   image: golang:1.9.1
