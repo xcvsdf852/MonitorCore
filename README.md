@@ -36,8 +36,12 @@ curl http://{HOST}:{HOST}/info
 
 #### Put mission
 
+```
+[POST] http://{HOST}:{PORT}/put
+```
 ```bash
-curl -X POST --data "no=A003&userId=9876543210&title=put+test&duration=20&extrainfo={\"info\":\"put+extrainfo\"}&op=<=&value=450000" http://{HOST}:{HOST}/put
+# curl in shell example
+curl -X POST --data "no=A004&userId=9876543210&title=put+test&duration=20&extrainfo={\"info\":\"put+extrainfo\"}&op=<=&value=450000" http://localhost:9453/put
 
 # HOST: Which machine that you started.
 # PORT: A param named "HTTP_HOST" define in config.yaml
@@ -49,6 +53,9 @@ curl -X POST --data "no=A003&userId=9876543210&title=put+test&duration=20&extrai
 #     extrainfo => unexpect data, format to JSON. (REQUIRE)
 #     op => Operator to compare value. (REQUIRE)
 #     value => a value to compare with this mission. (REQUIRE)
+# Response:
+#     Success:  OK
+#     Params Wrong: Parameter is wrong! need: no, userId, title, duration, extrainfo, op, value
 ```
 
 ## Data format to NSQ
