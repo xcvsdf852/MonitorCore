@@ -19,17 +19,17 @@ import (
 )
 
 type schema struct {
-	Duration  int64
-	Extrainfo string
-	Op        string
-	Value     string
+	Duration  int64  `json:"duration"`
+	Extrainfo string `json:"extrainfo"`
+	Op        string `json:"op"`
+	Value     string `json:"value"`
 }
 
 type mission struct {
-	No     string
-	Title  string
-	UserID string
-	Schema schema
+	No     string `json:"no"`
+	Title  string `json:"title"`
+	UserID string `json:"user_id"`
+	Schema schema `json:"schema"`
 }
 
 type monitorCore struct {
@@ -104,25 +104,29 @@ func main() {
 
 func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		no := req.Form.Get("no")
-		userID := req.Form.Get("userId")
-		title := req.Form.Get("title")
-		duration := req.Form.Get("duration")
-		extrainfo := req.Form.Get("extrainfo")
-		op := req.Form.Get("op")
-		value := req.Form.Get("value")
+		if err := req.ParseForm(); err != nil {
+			log.Printf("ParseForm() err: %v\n", err)
+			errorResponse(w, http.StatusUnprocessableEntity, viper.GetString("ERROR_CODE_UNPROCESSABLE_ENTITY"), viper.GetString("ERROR_MSG_UNPROCESSABLE_ENTITY"))
+			return
+		}
+		no := req.FormValue("no")
+		userID := req.FormValue("userId")
+		title := req.FormValue("title")
+		durationStr := req.FormValue("duration")
+		extrainfo := req.FormValue("extrainfo")
+		op := req.FormValue("op")
+		value := req.FormValue("value")
 
-		if no == "" || title == "" || userID == "" || duration == "" || extrainfo == "" || op == "" || value == "" {
-			io.WriteString(w, "Parameter is wrong! need: no, userId, title, duration, extrainfo, op, value")
+		if no == "" || title == "" || userID == "" || durationStr == "" || extrainfo == "" || op == "" || value == "" {
+			errorResponse(w, http.StatusUnprocessableEntity, viper.GetString("ERROR_CODE_UNPROCESSABLE_ENTITY"), viper.GetString("ERROR_MSG_UNPROCESSABLE_ENTITY"))
 		} else {
-			dur, _ := strconv.ParseInt(duration, 10, 64)
+			duration, _ := strconv.ParseInt(durationStr, 10, 64)
 			m := mission{
 				No:     no,
 				Title:  title,
 				UserID: userID,
 				Schema: schema{
-					Duration:  dur,
+					Duration:  duration,
 					Extrainfo: extrainfo,
 					Op:        op,
 					Value:     value,
@@ -135,10 +139,10 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				log.Println(err)
 			}
+			okResponse(w, make(map[string]interface{}))
 		}
-		io.WriteString(w, "OK")
 	} else {
-		io.WriteString(w, "Wrong HTTP request method.")
+		errorResponse(w, http.StatusMethodNotAllowed, viper.GetString("ERROR_CODE_HTTP_METHOD_NOT_ALLOWED"), viper.GetString("ERROR_MSG_HTTP_METHOD_NOT_ALLOWED"))
 	}
 }
 
@@ -149,13 +153,37 @@ func (mc *monitorCore) infoRequest(w http.ResponseWriter, req *http.Request) {
 		mcInfo["name"] = mc.name
 		mcInfo["role"] = mc.role
 		mcInfo["duration"] = mc.duration
-		mcInfo["missionCount"] = len(mc.missionList)
-		mcInfo["memberList"] = mc.memberList
-		mcInfoStr, _ := json.Marshal(mcInfo)
-		io.WriteString(w, string(mcInfoStr[:]))
+		mcInfo["mission_count"] = len(mc.missionList)
+		mcInfo["member_list"] = mc.memberList
+		okResponse(w, mcInfo)
 	} else {
-		io.WriteString(w, "Wrong HTTP request method.")
+		errorResponse(w, http.StatusMethodNotAllowed, viper.GetString("ERROR_CODE_HTTP_METHOD_NOT_ALLOWED"), viper.GetString("ERROR_MSG_HTTP_METHOD_NOT_ALLOWED"))
 	}
+}
+
+func errorResponse(w http.ResponseWriter, httpStatus int, errorCode string, msg string, extraInfo ...interface{}) {
+	errorRes := make(map[string]interface{})
+	errorRes["code"] = errorCode
+	errorRes["msg"] = msg
+	errorRes["extraInfo"] = extraInfo
+
+	res := make(map[string]interface{})
+	res["status"] = "error"
+	res["data"] = errorRes
+
+	resStr, _ := json.Marshal(res)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(httpStatus)
+	io.WriteString(w, string(resStr[:]))
+}
+
+func okResponse(w http.ResponseWriter, data interface{}) {
+	res := make(map[string]interface{})
+	res["status"] = "ok"
+	res["data"] = data
+	resStr, _ := json.Marshal(res)
+	w.Header().Set("Content-Type", "application/json")
+	io.WriteString(w, string(resStr[:]))
 }
 
 func (mc *monitorCore) listenHTTPRequest() {

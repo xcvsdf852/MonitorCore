@@ -1,7 +1,7 @@
 # Not yet to use
 PROJECT_NAME: TEST
 # Do check mission each sec.
-DURATION: 1
+DURATION: 15
 
 # Link to ETCD
 ETCD_HOST: 127.0.0.1
@@ -15,3 +15,11 @@ NSQ_TOPIC: BBOS_TO_ME
 
 # Listen http port
 HTTP_PORT: 9453
+
+# ERROR CODE
+#### request method not allowed
+ERROR_CODE_HTTP_METHOD_NOT_ALLOWED: 12000001
+ERROR_MSG_HTTP_METHOD_NOT_ALLOWED: "Invalid HTTP request method."
+#### request param error
+ERROR_CODE_UNPROCESSABLE_ENTITY: 120000002
+ERROR_MSG_UNPROCESSABLE_ENTITY: "Invalid HTTP request parameter."
