@@ -41,39 +41,65 @@ curl http://{HOST}:{HOST}/info
 ```
 ```bash
 # curl in shell example
-curl -X POST --data "no=A004&userId=9876543210&title=put+test&duration=20&extrainfo={\"info\":\"put+extrainfo\"}&op=<=&value=450000" http://localhost:9453/put
+curl -X POST --data "id=1&owner=edwin&no=A0000001&name=有人中了大樂透&duration=1&duration_unit=MINUTE&op=>&value=200000000&extrainfo={"buy_date":"today", "win_date":"yesterday"}" http://localhost:9453/put
 
 # HOST: Which machine that you started.
 # PORT: A param named "HTTP_HOST" define in config.yaml
 # Params:
-#     no => define mission like id is unique. (REQUIRE)
-#     userId => difine the mission is belone to who. (REQUIRE)
-#     title => a string decribe the mission. (REQUIRE)
-#     duration => How long will be send to compare. (REQUIRE)
-#     extrainfo => unexpect data, format to JSON. (REQUIRE)
+#     id => user_panel_detail.id (REQUIRE)
+#     owner => user_panel_detail.owner (REQUIRE)
+#     no => user_panel_detail.api_no (REQUIRE)
+#     name => user_panel_detail.name (REQUIRE)
+#     duration => user_panel_detail.duration (REQUIRE)
+#     duration_unit => user_panel_detail.duration_unit (REQUIRE)
 #     op => Operator to compare value. (REQUIRE)
 #     value => a value to compare with this mission. (REQUIRE)
+#     extrainfo => user_panel_detail.extrainfo (REQUIRE)
+
 # Response:
-#     Success:  OK
-#     Params Wrong: Parameter is wrong! need: no, userId, title, duration, extrainfo, op, value
+#     Success:  
+{
+    "data": {},
+    "status": "ok"
+}
+
+#     Invalid HTTP request method:
+{
+    "data": {
+        "code": "12000001",
+        "extraInfo": null,
+        "msg": "Invalid HTTP request method."
+    },
+    "status": "error"
+}
+
+#     Invalid HTTP request parameter:
+{
+    "data": {
+        "code": "120000002",
+        "extraInfo": null,
+        "msg": "Invalid HTTP request parameter."
+    },
+    "status": "error"
+}
 ```
 
 ## Data format to NSQ
 
 ```json
-{"No":"A003","Title":"put test","UserID":"9876543210","Schema":{"Duration":2,"Extrainfo":"{\"info\":\"put extrainfo\"}","Op":"<=","Value":"450000"}}
+{"id":1,"owner":"edwin","no":"A0000001","name":"有人中了大樂透","duration":1,"duration_unit":"MINUTE","op":">","value":"200000000","extrainfo":"{\"buy_date\":\"today\", \"win_date\":\"yesterday\"}"}
 ```
 
 ```json
 {
-    "No":"A003",
-    "Title":"put test",
-    "UserID":"9876543210",
-    "Schema":{
-        "Duration":2,
-        "Extrainfo":"{\"info\":\"put extrainfo\"}",
-        "Op":"<=",
-        "Value":"450000"
-    }
+    "id": 1,
+    "owner": "edwin",
+    "no": "A0000001",
+    "name": "有人中了大樂透",
+    "duration": 1,
+    "duration_unit": "MINUTE",
+    "op": ">",
+    "value": "200000000",
+    "extrainfo": "{\"buy_date\":\"today\", \"win_date\":\"yesterday\"}"
 }
 ```
