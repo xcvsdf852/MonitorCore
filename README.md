@@ -1,23 +1,3 @@
-
-# How to build
-
-### Step 1
-
-use 'git clone' clone project to src in $GO_PATH
-
-### step 2
-
-Get into project folder './MonitorCore'
-
-### step 3
-
-Build executable file with command 'go build'
-
-### step 4
-
-You will get executable file named "MonitorCore" or "MonitorCore.exe" (in windows) then enjoy it.
-
-
 # Prepared before use
 
 1. NSQd started.
@@ -34,28 +14,17 @@ curl http://{HOST}:{HOST}/info
 # PORT: A param named "HTTP_HOST" define in config.yaml
 ```
 
-#### Put mission
+#### Add mission
 
 ```
 [POST] http://{HOST}:{PORT}/put
 ```
 ```bash
 # curl in shell example
-curl -X POST --data "id=1&owner=edwin&no=A0000001&name=有人中了大樂透&duration=1&duration_unit=MINUTE&op=>&value=200000000&extrainfo={"buy_date":"today", "win_date":"yesterday"}" http://localhost:9453/put
+curl -X POST --data "id=1&owner=1000001&no=A00001&name=Is anyone hit the Jackpot&duration=10&duration_unit=MINUTE&condition={"op":">", "value":"2000000"}&extrainfo={"date":"2018-01-01"}" http://localhost:9453/put
 
 # HOST: Which machine that you started.
 # PORT: A param named "HTTP_HOST" define in config.yaml
-# Params:
-#     id => user_panel_detail.id (REQUIRE)
-#     owner => user_panel_detail.owner (REQUIRE)
-#     no => user_panel_detail.api_no (REQUIRE)
-#     name => user_panel_detail.name (REQUIRE)
-#     duration => user_panel_detail.duration (REQUIRE)
-#     duration_unit => user_panel_detail.duration_unit (REQUIRE)
-#     op => Operator to compare value. (REQUIRE)
-#     value => a value to compare with this mission. (REQUIRE)
-#     extrainfo => user_panel_detail.extrainfo (REQUIRE)
-
 # Response:
 #     Success:  
 {
@@ -87,19 +56,32 @@ curl -X POST --data "id=1&owner=edwin&no=A0000001&name=有人中了大樂透&dur
 ## Data format to NSQ
 
 ```json
-{"id":1,"owner":"edwin","no":"A0000001","name":"有人中了大樂透","duration":1,"duration_unit":"MINUTE","op":">","value":"200000000","extrainfo":"{\"buy_date\":\"today\", \"win_date\":\"yesterday\"}"}
+{"id":1,"owner":"1000001","no":"A00001","name":"Is anyone hit the Jackpot","duration":10,"duration_unit":"MINUTE","condition":"{\"op\":\">\", \"value\":\"2000000\"}","extrainfo":"{\"date\":\"2018-01-01\"}"}
 ```
 
 ```json
 {
     "id": 1,
-    "owner": "edwin",
-    "no": "A0000001",
-    "name": "有人中了大樂透",
-    "duration": 1,
+    "owner": "1000001",
+    "no": "A00001",
+    "name": "Is anyone hit the Jackpot",
+    "duration": 10,
     "duration_unit": "MINUTE",
-    "op": ">",
-    "value": "200000000",
-    "extrainfo": "{\"buy_date\":\"today\", \"win_date\":\"yesterday\"}"
+    "condition": "{\"op\":\">\", \"value\":\"2000000\"}",
+    "extrainfo": "{\"date\":\"2018-01-01\"}"
 }
 ```
+
+
+## Parameter describe
+
+| Name | Type | Describe | Example |
+|---|---|---|---|
+| id | Integer | Mission primary key | 1 |
+| owner | String | User id by mission owner | 1000001 |
+| no | String | Mission's type | A00001 |
+| name | String | Mission's name | Is anyone hit the Jackpot? |
+| duration | Integer | execution interval | 10 |
+| duration_unit | String | duration unit | MINUTE |
+| condition | Json String | A condition to excute mission | {"op":">","value":"2000000"} |
+| extrainfo | Json String | mission primary key | {"date":"2018-01-01"} |
