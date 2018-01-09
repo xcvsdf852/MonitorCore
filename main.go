@@ -18,18 +18,15 @@ import (
 	"github.com/spf13/viper"
 )
 
-type schema struct {
-	Duration  int64  `json:"duration"`
-	Extrainfo string `json:"extrainfo"`
-	Op        string `json:"op"`
-	Value     string `json:"value"`
-}
-
 type mission struct {
-	No     string `json:"no"`
-	Title  string `json:"title"`
-	UserID string `json:"user_id"`
-	Schema schema `json:"schema"`
+	ID           string
+	Owner        string
+	No           string
+	Name         string
+	Duration     int
+	DurationUnit string `json:"duration_unit"`
+	Condition    string
+	Extrainfo    string
 }
 
 type monitorCore struct {
@@ -38,11 +35,11 @@ type monitorCore struct {
 	duration           int64
 	heartbeatKeyPrefix string
 	missionKeyPrefix   string
-	lastExecTimePrefix string
+	nextExecTimePrefix string
 	role               string
 	memberList         []string
 	missionList        map[string]mission
-	lastExecTimeList   map[string]int64
+	nextExecTimeList   map[string]int64
 	cli                *clientv3.Client
 	nsq                *nsq.Producer
 }
@@ -78,7 +75,7 @@ func main() {
 		duration:           viper.GetInt64("DURATION"),
 		heartbeatKeyPrefix: fmt.Sprintf("%s/%s", viper.GetString("ETCD_PREFIX"), "heartbeat"),
 		missionKeyPrefix:   fmt.Sprintf("%s/%s", viper.GetString("ETCD_PREFIX"), "mission"),
-		lastExecTimePrefix: fmt.Sprintf("%s/%s", viper.GetString("ETCD_PREFIX"), "lastExecTime"),
+		nextExecTimePrefix: fmt.Sprintf("%s/%s", viper.GetString("ETCD_PREFIX"), "nextExecTime"),
 		role:               "member",
 		cli:                cli,
 		nsq:                producer,
@@ -109,30 +106,30 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 			errorResponse(w, http.StatusUnprocessableEntity, viper.GetString("ERROR_CODE_UNPROCESSABLE_ENTITY"), viper.GetString("ERROR_MSG_UNPROCESSABLE_ENTITY"))
 			return
 		}
+		id := req.FormValue("id")
+		owner := req.FormValue("owner")
 		no := req.FormValue("no")
-		userID := req.FormValue("userId")
-		title := req.FormValue("title")
+		name := req.FormValue("name")
 		durationStr := req.FormValue("duration")
+		durationUnit := req.FormValue("duration_unit")
+		condition := req.FormValue("condition")
 		extrainfo := req.FormValue("extrainfo")
-		op := req.FormValue("op")
-		value := req.FormValue("value")
 
-		if no == "" || title == "" || userID == "" || durationStr == "" || extrainfo == "" || op == "" || value == "" {
+		if id == "" || owner == "" || no == "" || name == "" || durationStr == "" || durationUnit == "" || condition == "" {
 			errorResponse(w, http.StatusUnprocessableEntity, viper.GetString("ERROR_CODE_UNPROCESSABLE_ENTITY"), viper.GetString("ERROR_MSG_UNPROCESSABLE_ENTITY"))
 		} else {
-			duration, _ := strconv.ParseInt(durationStr, 10, 64)
+			duration, _ := strconv.Atoi(durationStr)
 			m := mission{
-				No:     no,
-				Title:  title,
-				UserID: userID,
-				Schema: schema{
-					Duration:  duration,
-					Extrainfo: extrainfo,
-					Op:        op,
-					Value:     value,
-				},
+				ID:           id,
+				Owner:        owner,
+				No:           no,
+				Name:         name,
+				Duration:     duration,
+				DurationUnit: durationUnit,
+				Condition:    condition,
+				Extrainfo:    extrainfo,
 			}
-			missionKey := fmt.Sprintf("%s/%s/%s", mc.missionKeyPrefix, m.UserID, m.No)
+			missionKey := fmt.Sprintf("%s/%s", mc.missionKeyPrefix, m.ID)
 			mToJSON, _ := json.Marshal(m)
 			log.Println("put mission:\n" + string(mToJSON[:]) + "\n")
 			_, err := mc.cli.Put(context.TODO(), missionKey, string(mToJSON[:]))
@@ -220,16 +217,16 @@ func watchMission(mc *monitorCore) {
 }
 
 func watchLastExecTime(mc *monitorCore) {
-	log.Printf("Watching lastExecTime by '%s'", mc.lastExecTimePrefix)
-	rch := mc.cli.Watch(context.Background(), mc.lastExecTimePrefix, clientv3.WithPrefix())
+	log.Printf("Watching lastExecTime by '%s'", mc.nextExecTimePrefix)
+	rch := mc.cli.Watch(context.Background(), mc.nextExecTimePrefix, clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			log.Printf("Type：%s\nKey：%s; data：%s\n", ev.Type, string(ev.Kv.Key), string(ev.Kv.Value))
 			switch ev.Type {
 			case clientv3.EventTypeDelete:
-				delete(mc.lastExecTimeList, string(ev.Kv.Key))
+				delete(mc.nextExecTimeList, string(ev.Kv.Key))
 			case clientv3.EventTypePut:
-				mc.lastExecTimeList[string(ev.Kv.Key)], _ = strconv.ParseInt(string(ev.Kv.Value), 10, 64)
+				mc.nextExecTimeList[string(ev.Kv.Key)], _ = strconv.ParseInt(string(ev.Kv.Value), 10, 64)
 			default:
 				log.Printf("Unexpect type: %s", ev.Type)
 			}
@@ -243,11 +240,13 @@ func (mc *monitorCore) CheckMission() {
 	total := len(mc.missionList)
 	log.Printf("Total mission: %d\n", total)
 	for key, m := range mc.missionList {
-		lastExecKey := fmt.Sprintf("%s/%s/%s", mc.lastExecTimePrefix, m.UserID, m.No)
-		fmt.Printf("Index: %d/%d\nKey: %s", index, total, key)
-		fmt.Printf("\nLast exec time:%d\n", mc.lastExecTimeList[lastExecKey])
-		if time.Now().Unix()-mc.lastExecTimeList[lastExecKey] >= m.Schema.Duration {
-			_, err := mc.cli.Put(context.TODO(), lastExecKey, strconv.FormatInt(time.Now().Unix(), 10))
+		nextExecKey := fmt.Sprintf("%s/%s", mc.nextExecTimePrefix, m.ID)
+		fmt.Printf("Index: %d/%d\nKey: %s\n", index, total, key)
+		fmt.Printf("Exec timestamp:%d\n", mc.nextExecTimeList[nextExecKey])
+		t := time.Unix(mc.nextExecTimeList[nextExecKey], 0)
+		fmt.Printf("Exec datetime:%s\n", t.Format("2006-01-02 15:04:05"))
+		if mc.nextExecTimeList[nextExecKey] >= 0 && time.Now().Unix() >= mc.nextExecTimeList[nextExecKey] {
+			_, err := mc.cli.Put(context.TODO(), nextExecKey, strconv.FormatInt(calcAfterTimestamp(m.Duration, m.DurationUnit), 10))
 			if err != nil {
 				log.Println(err)
 			}
@@ -287,7 +286,7 @@ func (mc *monitorCore) UpdateMemberList() {
 func readInAllMission(mc *monitorCore) {
 	log.Printf("Read in all mission with key: %s\n", mc.missionKeyPrefix)
 	mc.missionList = make(map[string]mission)
-	mc.lastExecTimeList = make(map[string]int64)
+	mc.nextExecTimeList = make(map[string]int64)
 	resp, _ := mc.cli.Get(context.TODO(), mc.missionKeyPrefix, clientv3.WithPrefix())
 	for _, ev := range resp.Kvs {
 		m := mission{}
@@ -295,10 +294,41 @@ func readInAllMission(mc *monitorCore) {
 		if err != nil {
 			log.Println(err)
 		}
-		respLastExecTime, _ := mc.cli.Get(context.TODO(), mc.lastExecTimePrefix, clientv3.WithPrefix())
-		for _, evLastExecTime := range respLastExecTime.Kvs {
-			mc.lastExecTimeList[string(evLastExecTime.Key[:])], _ = strconv.ParseInt(string(evLastExecTime.Value[:]), 10, 64)
+		respNextExecTime, _ := mc.cli.Get(context.TODO(), mc.nextExecTimePrefix, clientv3.WithPrefix())
+		for _, evNextExecTime := range respNextExecTime.Kvs {
+			mc.nextExecTimeList[string(evNextExecTime.Key[:])], _ = strconv.ParseInt(string(evNextExecTime.Value[:]), 10, 64)
 		}
 		mc.missionList[string(ev.Key)] = m
 	}
+}
+
+// MINUTE, HOUR, DAY, WEEK, MONTH
+// 每分：本次執行+60 sec
+// 每時：每x小時的 00:00
+// 每日：每x日的 00:00:00
+// 每週：每x週的 週日 00:00:00
+// 每月：每x月的 1日 00:00:00
+func calcAfterTimestamp(duration int, durationUnit string) int64 {
+	now := time.Now()
+	switch durationUnit {
+	case "MINUTE":
+		now = now.Add(time.Duration(duration) * time.Minute)
+	case "HOUR":
+		now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.Local)
+		now = now.Add(time.Duration(duration) * time.Hour)
+	case "DAY":
+		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+		now = now.AddDate(0, 0, duration)
+	case "WEEK":
+		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+		shiftToDefaultWeekday := int(time.Sunday) - int(now.Weekday())
+		now = now.AddDate(0, 0, shiftToDefaultWeekday+(duration*7))
+	case "MONTH":
+		now = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
+		now = now.AddDate(0, duration, 0)
+	default:
+		return -1
+	}
+
+	return now.Unix()
 }
