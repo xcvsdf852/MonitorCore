@@ -18,6 +18,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const version = "0.0.2"
+
 type mission struct {
 	ID           string
 	Owner        string
@@ -146,6 +148,7 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 func (mc *monitorCore) infoRequest(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
 		mcInfo := make(map[string]interface{})
+		mcInfo["version"] = version
 		mcInfo["id"] = mc.id
 		mcInfo["name"] = mc.name
 		mcInfo["role"] = mc.role

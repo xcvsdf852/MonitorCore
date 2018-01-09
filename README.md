@@ -12,6 +12,21 @@ curl http://{HOST}:{HOST}/info
 
 # host: Which machine that you started.
 # PORT: A param named "HTTP_HOST" define in config.yaml
+# Response:
+{
+    "data": {
+        "duration": 15,
+        "id": 1515488607694174496,
+        "member_list": [
+            "1515488607694174496"
+        ],
+        "mission_count": 1,
+        "name": "TEST",
+        "role": "master",
+        "version": "0.0.2"
+    },
+    "status": "ok"
+}
 ```
 
 #### Add mission
