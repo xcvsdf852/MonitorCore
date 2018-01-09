@@ -82,6 +82,6 @@ curl -X POST --data "id=1&owner=1000001&no=A00001&name=Is anyone hit the Jackpot
 | no | String | Mission's type | A00001 |
 | name | String | Mission's name | Is anyone hit the Jackpot? |
 | duration | Integer | Execution interval | 10 |
-| duration_unit | String | Execution interval unit | MINUTE |
+| duration_unit | String | Execution interval unit (MINUTE, HOUR, DAY, WEEK, MONTH) | MINUTE |
 | condition | Json String | Excute mission according to condition | {"op":">","value":"2000000"} |
 | extrainfo | Json String | More data for API | {"date":"2018-01-01"} |
