@@ -22,14 +22,15 @@ import (
 const version = "0.0.2"
 
 type mission struct {
-	ID           string
-	Owner        string
-	No           string
-	Name         string
-	Duration     int
+	ID           string `json:"id"`
+	Owner        string `json:"owner"`
+	Domain       string `json:"domain"`
+	No           string `json:"no"`
+	Name         string `json:"name"`
+	Duration     int    `json:"duration"`
 	DurationUnit string `json:"duration_unit"`
-	Condition    string
-	Extrainfo    string
+	Condition    string `json:"condition"`
+	Extrainfo    string `json:"extrainfo"`
 }
 
 type monitorCore struct {
@@ -138,7 +139,7 @@ func (mc *monitorCore) delRequest(w http.ResponseWriter, req *http.Request) {
 				}
 			}
 		}
-		result["deleted_count"] = updateCount
+		result["update_count"] = updateCount
 		okResponse(w, result)
 	} else {
 		errorResponse(w, http.StatusMethodNotAllowed, viper.GetString("ERROR_CODE_HTTP_METHOD_NOT_ALLOWED"), viper.GetString("ERROR_MSG_HTTP_METHOD_NOT_ALLOWED"))
@@ -154,6 +155,7 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 		}
 		id := req.FormValue("id")
 		owner := req.FormValue("owner")
+		domain := req.FormValue("domain")
 		no := req.FormValue("no")
 		name := req.FormValue("name")
 		durationStr := req.FormValue("duration")
@@ -161,13 +163,14 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 		condition := req.FormValue("condition")
 		extrainfo := req.FormValue("extrainfo")
 
-		if id == "" || owner == "" || no == "" || name == "" || durationStr == "" || durationUnit == "" || condition == "" {
+		if id == "" || owner == "" || domain == "" || no == "" || name == "" || durationStr == "" || durationUnit == "" || condition == "" {
 			errorResponse(w, http.StatusUnprocessableEntity, viper.GetString("ERROR_CODE_UNPROCESSABLE_ENTITY"), viper.GetString("ERROR_MSG_UNPROCESSABLE_ENTITY"))
 		} else {
 			duration, _ := strconv.Atoi(durationStr)
 			m := mission{
 				ID:           id,
 				Owner:        owner,
+				Domain:       domain,
 				No:           no,
 				Name:         name,
 				Duration:     duration,
