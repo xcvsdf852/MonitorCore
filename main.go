@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -98,6 +99,49 @@ func main() {
 		if mc.role == "master" {
 			mc.CheckMission()
 		}
+	}
+}
+
+func (mc *monitorCore) delRequest(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		if err := req.ParseForm(); err != nil {
+			log.Printf("ParseForm() err: %v\n", err)
+			errorResponse(w, http.StatusUnprocessableEntity, viper.GetString("ERROR_CODE_UNPROCESSABLE_ENTITY"), viper.GetString("ERROR_MSG_UNPROCESSABLE_ENTITY"))
+			return
+		}
+		id := req.FormValue("id")
+		owner := req.FormValue("owner")
+		no := req.FormValue("no")
+
+		updateCount := 0
+		result := make(map[string]interface{})
+		if id == "" && owner == "" && no == "" {
+
+		} else {
+			if id != "" {
+				idSlice := strings.Split(id, ",")
+				for _, missionID := range idSlice {
+					updateCount += mc.deleteMissionByID(missionID)
+				}
+			}
+
+			ownerSlice := strings.Split(owner, ",")
+			noSlice := strings.Split(no, ",")
+			if owner != "" || no != "" {
+				for _, m := range mc.missionList {
+					if stringInSlice(m.No, noSlice) {
+						updateCount += mc.deleteMissionByID(m.ID)
+					}
+					if stringInSlice(m.Owner, ownerSlice) {
+						updateCount += mc.deleteMissionByID(m.ID)
+					}
+				}
+			}
+		}
+		result["deleted_count"] = updateCount
+		okResponse(w, result)
+	} else {
+		errorResponse(w, http.StatusMethodNotAllowed, viper.GetString("ERROR_CODE_HTTP_METHOD_NOT_ALLOWED"), viper.GetString("ERROR_MSG_HTTP_METHOD_NOT_ALLOWED"))
 	}
 }
 
@@ -190,10 +234,23 @@ func (mc *monitorCore) listenHTTPRequest() {
 	r := http.NewServeMux()
 	r.Handle("/put", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.putRequest)))
 	r.Handle("/info", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.infoRequest)))
+	r.Handle("/del", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.delRequest)))
 	err := http.ListenAndServe(":"+viper.GetString("HTTP_PORT"), handlers.CompressHandler(r))
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func (mc *monitorCore) deleteMissionByID(id string) (deleted int) {
+	deleted = 0
+	delRet, err := mc.cli.Delete(context.TODO(), fmt.Sprintf("%s/%s", mc.missionKeyPrefix, id))
+	log.Printf(string(delRet.Deleted))
+	if err != nil {
+		log.Println(err)
+	}
+	deleted += int(delRet.Deleted)
+
+	return
 }
 
 func watchMission(mc *monitorCore) {
@@ -334,4 +391,13 @@ func calcAfterTimestamp(duration int, durationUnit string) int64 {
 	}
 
 	return now.Unix()
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
