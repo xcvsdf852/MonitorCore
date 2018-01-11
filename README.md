@@ -31,19 +31,22 @@ ERROR_CODE_UNPROCESSABLE_ENTITY: 120000002
 ERROR_MSG_UNPROCESSABLE_ENTITY: "Invalid HTTP request parameter."
 ```
 * Exameple to use
+
 ```bash
-#use default config
+
+## use default config
 ./MonitorCore
 
-#use flag to read config
+## use flag to read config
 ./MonitorCore -c "/tmp/myConfig.yaml"
 
-#use Environment
+## use Environment
 BBOS_MC_HTTP_PORT=9455 ./MonitorCore
 
-#Mix above is fine to use
-#depend on Priority: 1.Environment 2.Flag 3.Default config
+## Mix above is fine to use
+## depend on Priority: 1.Environment 2.Flag 3.Default config
 BBOS_MC_HTTP_PORT=9455 ./MonitorCore -c "/tmp/myConfig.yaml"
+
 ```
 
 # What can you do when MonitorCore started
