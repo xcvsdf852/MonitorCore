@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +23,38 @@ import (
 )
 
 const version = "0.0.2"
+
+var defaultYaml = []byte(`
+PROJECT_NAME: MonitorCore
+DURATION: 15
+ETCD_HOST: localhost
+ETCD_PORT: 2379
+ETCD_PREFIX: /BBOS/MonitorCore
+NSQ_HOST: localhost
+NSQ_PORT: 4150
+NSQ_TOPIC: BBOS_TO_ME
+HTTP_PORT: 9453
+ERROR_CODE_HTTP_METHOD_NOT_ALLOWED: 12000001
+ERROR_MSG_HTTP_METHOD_NOT_ALLOWED: "Invalid HTTP request method."
+ERROR_CODE_UNPROCESSABLE_ENTITY: 120000002
+ERROR_MSG_UNPROCESSABLE_ENTITY: "Invalid HTTP request parameter."
+`)
+
+type config struct {
+	ProjectName                   string `mapstructure:"PROJECT_NAME" json:"PROJECT_NAME"`
+	Duration                      int    `mapstructure:"DURATION" json:"DURATION"`
+	EtcdHost                      string `mapstructure:"ETCD_HOST" json:"ETCD_HOST"`
+	EtcdPort                      string `mapstructure:"ETCD_PORT" json:"ETCD_PORT"`
+	EtcdPrefix                    string `mapstructure:"ETCD_PREFIX" json:"ETCD_PREFIX"`
+	NsqHost                       string `mapstructure:"NSQ_HOST" json:"NSQ_HOST"`
+	NsqPort                       string `mapstructure:"NSQ_PORT" json:"NSQ_PORT"`
+	NsqTopic                      string `mapstructure:"NSQ_TOPIC" json:"NSQ_TOPIC"`
+	HTTPPort                      string `mapstructure:"HTTP_PORT" json:"HTTP_PORT"`
+	ErrorCodeHTTPMethodNotAllowed string `mapstructure:"ERROR_CODE_HTTP_METHOD_NOT_ALLOWED" json:"ERROR_CODE_HTTP_METHOD_NOT_ALLOWED"`
+	ErrorMsgHTTPMethodNotAllowed  string `mapstructure:"ERROR_MSG_HTTP_METHOD_NOT_ALLOWED" json:"ERROR_MSG_HTTP_METHOD_NOT_ALLOWED"`
+	ErrorCodeUnprocessableEntity  string `mapstructure:"ERROR_CODE_UNPROCESSABLE_ENTITY" json:"ERROR_CODE_UNPROCESSABLE_ENTITY"`
+	ErrorMsgUnprocessableEntity   string `mapstructure:"ERROR_MSG_UNPROCESSABLE_ENTITY" json:"ERROR_MSG_UNPROCESSABLE_ENTITY"`
+}
 
 type mission struct {
 	ID           string `json:"id"`
@@ -51,13 +86,29 @@ type monitorCore struct {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.LstdFlags)
+
 	viper.SetConfigType("yaml")
-	viper.SetConfigName("config")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("BBOS_MC")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	var configFile string
+	flag.StringVar(&configFile, "c", "config.yaml", "a string var")
+	flag.Parse()
+	conf, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		log.Fatal(err)
+		conf = defaultYaml
 	}
+	viper.ReadConfig(bytes.NewBuffer(conf))
+
+	cfg := &config{}
+	err = viper.Unmarshal(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	confg, _ := json.MarshalIndent(cfg, "", "    ")
+	log.Printf("%s", confg)
 
 	log.Println("Connecting to NSQd...")
 	producer, err := nsq.NewProducer(fmt.Sprintf("%s:%d", viper.GetString("NSQ_HOST"), viper.GetInt("NSQ_PORT")), nsq.NewConfig())

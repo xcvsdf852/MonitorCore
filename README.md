@@ -3,6 +3,49 @@
 1. NSQd started.
 2. ETCd started.
 
+# Config
+
+* Priority：
+    1. Environment
+        * please use "BBOS_MC_" as key prefix, like: [PROJECT_NAME]: BBOS_MC_PROJECT_NAME=TEST
+    2. Config File
+        * Use flag "-c" to definde config file path.
+        * If you do not use "-c" difinde will read default file named: "config.yaml" in the same folder.
+    3. Default config
+        * if step 2's config file can not read or not exist will use default config
+
+* Default Config setting as below:
+```yaml
+PROJECT_NAME: MonitorCore
+DURATION: 15
+ETCD_HOST: localhost
+ETCD_PORT: 2379
+ETCD_PREFIX: /BBOS/MonitorCore
+NSQ_HOST: localhost
+NSQ_PORT: 4150
+NSQ_TOPIC: BBOS_TO_ME
+HTTP_PORT: 9453
+ERROR_CODE_HTTP_METHOD_NOT_ALLOWED: 12000001
+ERROR_MSG_HTTP_METHOD_NOT_ALLOWED: "Invalid HTTP request method."
+ERROR_CODE_UNPROCESSABLE_ENTITY: 120000002
+ERROR_MSG_UNPROCESSABLE_ENTITY: "Invalid HTTP request parameter."
+```
+* Exameple to use
+```
+# use default config
+./MonitorCore
+
+# use flag to read config
+./MonitorCore -c "/tmp/myConfig.yaml"
+
+# use Environment
+BBOS_MC_HTTP_PORT=9455 ./MonitorCore
+
+# Mix above is fine to use
+# depend on Priority: 1.Environment 2.Flag 3.Default config
+BBOS_MC_HTTP_PORT=9455 ./MonitorCore -c "/tmp/myConfig.yaml"
+```
+
 # What can you do when MonitorCore started
 
 #### Get Info
