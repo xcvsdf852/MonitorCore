@@ -31,7 +31,7 @@ ERROR_CODE_UNPROCESSABLE_ENTITY: 120000002
 ERROR_MSG_UNPROCESSABLE_ENTITY: "Invalid HTTP request parameter."
 ```
 * Exameple to use
-```
+```bash
 # use default config
 ./MonitorCore
 
