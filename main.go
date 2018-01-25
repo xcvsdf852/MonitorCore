@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"sort"
 	"strconv"
@@ -22,7 +23,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const version = "0.0.2"
+const version = "0.0.4"
 
 var defaultYaml = []byte(`
 PROJECT_NAME: MonitorCore
@@ -155,6 +156,7 @@ func main() {
 }
 
 func (mc *monitorCore) delRequest(w http.ResponseWriter, req *http.Request) {
+	hTTPRequestLog(req)
 	if req.Method == "POST" {
 		if err := req.ParseForm(); err != nil {
 			log.Printf("ParseForm() err: %v\n", err)
@@ -198,6 +200,7 @@ func (mc *monitorCore) delRequest(w http.ResponseWriter, req *http.Request) {
 }
 
 func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
+	hTTPRequestLog(req)
 	if req.Method == "POST" {
 		if err := req.ParseForm(); err != nil {
 			log.Printf("ParseForm() err: %v\n", err)
@@ -231,11 +234,12 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 			}
 			missionKey := fmt.Sprintf("%s/%s", mc.missionKeyPrefix, m.ID)
 			mToJSON, _ := json.Marshal(m)
-			log.Println("put mission:\n" + string(mToJSON[:]) + "\n")
+			log.Println("put mission from HTTP request:\n" + string(mToJSON[:]) + "\n")
 			_, err := mc.cli.Put(context.TODO(), missionKey, string(mToJSON[:]))
 			if err != nil {
 				log.Println(err)
 			}
+			mc.nextExecTimeList[fmt.Sprintf("%s/%s", mc.nextExecTimePrefix, m.ID)] = 0
 			okResponse(w, make(map[string]interface{}))
 		}
 	} else {
@@ -244,6 +248,7 @@ func (mc *monitorCore) putRequest(w http.ResponseWriter, req *http.Request) {
 }
 
 func (mc *monitorCore) infoRequest(w http.ResponseWriter, req *http.Request) {
+	hTTPRequestLog(req)
 	if req.Method == "GET" {
 		mcInfo := make(map[string]interface{})
 		mcInfo["version"] = version
@@ -273,6 +278,7 @@ func errorResponse(w http.ResponseWriter, httpStatus int, errorCode string, msg 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
 	io.WriteString(w, string(resStr[:]))
+	log.Printf("HTTP response:\n%s\n", string(resStr[:]))
 }
 
 func okResponse(w http.ResponseWriter, data interface{}) {
@@ -282,17 +288,23 @@ func okResponse(w http.ResponseWriter, data interface{}) {
 	resStr, _ := json.Marshal(res)
 	w.Header().Set("Content-Type", "application/json")
 	io.WriteString(w, string(resStr[:]))
+	log.Printf("HTTP response:\n%s\n", string(resStr[:]))
 }
 
 func (mc *monitorCore) listenHTTPRequest() {
 	r := http.NewServeMux()
-	r.Handle("/put", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.putRequest)))
-	r.Handle("/info", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.infoRequest)))
-	r.Handle("/del", handlers.LoggingHandler(os.Stdout, http.HandlerFunc(mc.delRequest)))
+	r.Handle("/put", http.HandlerFunc(mc.putRequest))
+	r.Handle("/info", http.HandlerFunc(mc.infoRequest))
+	r.Handle("/del", http.HandlerFunc(mc.delRequest))
 	err := http.ListenAndServe(":"+viper.GetString("HTTP_PORT"), handlers.CompressHandler(r))
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func hTTPRequestLog(req *http.Request) {
+	requestDump, _ := httputil.DumpRequest(req, true)
+	log.Printf("HTTP request log:\n%s\n", string(requestDump))
 }
 
 func (mc *monitorCore) deleteMissionByID(id string) (deleted int) {
@@ -331,7 +343,7 @@ func watchMission(mc *monitorCore) {
 }
 
 func watchLastExecTime(mc *monitorCore) {
-	log.Printf("Watching lastExecTime by '%s'", mc.nextExecTimePrefix)
+	log.Printf("Watching mission's next execute time by '%s'", mc.nextExecTimePrefix)
 	rch := mc.cli.Watch(context.Background(), mc.nextExecTimePrefix, clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
@@ -350,24 +362,27 @@ func watchLastExecTime(mc *monitorCore) {
 
 func (mc *monitorCore) CheckMission() {
 	log.Println("Checking mission...")
-	index := 1
 	total := len(mc.missionList)
 	log.Printf("Total mission: %d\n", total)
 	for key, m := range mc.missionList {
 		nextExecKey := fmt.Sprintf("%s/%s", mc.nextExecTimePrefix, m.ID)
-		fmt.Printf("Index: %d/%d\nKey: %s\n", index, total, key)
-		fmt.Printf("Exec timestamp:%d\n", mc.nextExecTimeList[nextExecKey])
+		fmt.Printf("Mission key: %s  ", key)
 		t := time.Unix(mc.nextExecTimeList[nextExecKey], 0)
-		fmt.Printf("Exec datetime:%s\n", t.Format("2006-01-02 15:04:05"))
+		fmt.Printf("Execute datetime:%s\n", t.Format("2006-01-02 15:04:05"))
 		if mc.nextExecTimeList[nextExecKey] >= 0 && time.Now().Unix() >= mc.nextExecTimeList[nextExecKey] {
-			_, err := mc.cli.Put(context.TODO(), nextExecKey, strconv.FormatInt(calcAfterTimestamp(m.Duration, m.DurationUnit), 10))
+			nextExecTime := calcAfterTimestamp(m.Duration, m.DurationUnit)
+			_, err := mc.cli.Put(context.TODO(), nextExecKey, strconv.FormatInt(nextExecTime, 10))
 			if err != nil {
 				log.Println(err)
 			}
 			mToJSON, _ := json.Marshal(m)
-			mc.nsq.Publish(viper.GetString("NSQ_TOPIC"), mToJSON)
+			publishErr := mc.nsq.Publish(viper.GetString("NSQ_TOPIC"), mToJSON)
+			if publishErr != nil {
+				log.Println(publishErr)
+			} else {
+				log.Printf("Push mission to NSQ (topic -> %s), data:\n%s", viper.GetString("NSQ_TOPIC"), mToJSON)
+			}
 		}
-		index++
 	}
 }
 
