@@ -58,15 +58,16 @@ type config struct {
 }
 
 type mission struct {
-	ID           string `json:"id"`
-	Owner        string `json:"owner"`
-	Domain       string `json:"domain"`
-	No           string `json:"no"`
-	Name         string `json:"name"`
-	Duration     int    `json:"duration"`
-	DurationUnit string `json:"duration_unit"`
-	Condition    string `json:"condition"`
-	Extrainfo    string `json:"extrainfo"`
+	ID           string    `json:"id"`
+	Owner        string    `json:"owner"`
+	Domain       string    `json:"domain"`
+	No           string    `json:"no"`
+	Name         string    `json:"name"`
+	Duration     int       `json:"duration"`
+	DurationUnit string    `json:"duration_unit"`
+	Condition    string    `json:"condition"`
+	Extrainfo    string    `json:"extrainfo"`
+	SendDatetime time.Time `json:"send_datetime"`
 }
 
 type monitorCore struct {
@@ -375,6 +376,7 @@ func (mc *monitorCore) CheckMission() {
 			if err != nil {
 				log.Println(err)
 			}
+			m.SendDatetime = time.Now()
 			mToJSON, _ := json.Marshal(m)
 			publishErr := mc.nsq.Publish(viper.GetString("NSQ_TOPIC"), mToJSON)
 			if publishErr != nil {
