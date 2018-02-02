@@ -59,7 +59,8 @@ ERROR_MSG_UNPROCESSABLE_ENTITY: "Invalid HTTP request parameter."
     "duration": 10,
     "duration_unit": "MINUTE",
     "condition": "{\"op\":\">\", \"value\":\"2000000\"}",
-    "extrainfo": "{\"date\":\"2018-01-01\"}"
+    "extrainfo": "{\"date\":\"2018-01-01\"}",
+    "send_datetime": "2018-02-02T15:19:37.603091017+08:00"
 }
 ```
 
